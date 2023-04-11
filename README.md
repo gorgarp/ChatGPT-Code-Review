@@ -1,5 +1,5 @@
 # ChatGPT-Code-Review
-Rust application to feed ChatGPT a full cloned repo, and have it review the code.
+Rust application to feed ChatGPT a downloaded github repo, and have it review the code.
 
 You will need an OpenAI API Key.
 
