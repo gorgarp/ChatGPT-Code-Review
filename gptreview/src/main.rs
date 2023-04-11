@@ -42,25 +42,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() {
-            let code = fs::read_to_string(path)?;
-            let prompt = format!("Review the following code:\n\n```\n{}\n```", code);
-            match send_prompt(&client, &url, &api_key, &prompt).await {
-                Ok(response) => {
-                    if !response.choices.is_empty() {
-                        let response_text = format!("File: {}\nReview:\n{}\n\n", path.display(), response.choices[0].message.content);
-                        println!("{}", response_text);
-                        file.write_all(response_text.as_bytes())?;
-                    } else {
-                        println!("No response choices for file: {}", path.display());
-                    }
-                }
+            match process_file(&client, &url, &api_key, &path, &mut file).await {
+                Ok(_) => {}
                 Err(e) => {
-                    println!("Error: {}", e);
+                    println!("Error processing file {}: {}", path.display(), e);
                 }
             }
         }
     }
 
+    Ok(())
+}
+
+async fn process_file(
+    client: &Client,
+    url: &str,
+    api_key: &str,
+    path: &std::path::Path,
+    file: &mut File,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let code = fs::read_to_string(path)?;
+    let prompt = format!("Review the following code:\n\n```\n{}\n```", code);
+    let response = send_prompt(&client, &url, &api_key, &prompt).await?;
+    let response_text = format!("File: {}\nReview:\n{}\n\n", path.display(), response.choices[0].message.content);
+    println!("{}", response_text);
+    file.write_all(response_text.as_bytes())?;
     Ok(())
 }
 
