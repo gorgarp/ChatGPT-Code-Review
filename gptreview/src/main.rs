@@ -2,7 +2,8 @@ use reqwest::Client;
 use serde_derive::Deserialize;
 use serde_json::json;
 use std::fs;
-use std::io::{self, Write}; // added Write trait
+use std::fs::File;
+use std::io::{self, Write};
 use walkdir::WalkDir;
 
 #[derive(Debug, Deserialize)]
@@ -35,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
     let url = "https://api.openai.com/v1/chat/completions";
 
-    let mut file = fs::File::create("review.txt")?; // open the file for writing
+    let mut file = File::create("review.txt")?;
 
     for entry in WalkDir::new(folder_path) {
         let entry = entry?;
@@ -43,10 +44,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if path.is_file() {
             let code = fs::read_to_string(path)?;
             let prompt = format!("Review the following code:\n\n```\n{}\n```", code);
-            let response = send_prompt(&client, &url, &api_key, &prompt).await?;
-
-            // write the response to the file instead of printing it
-            writeln!(file, "File: {}\nReview:\n{}\n", path.display(), response.choices[0].message.content)?;
+            match send_prompt(&client, &url, &api_key, &prompt).await {
+                Ok(response) => {
+                    if !response.choices.is_empty() {
+                        let response_text = format!("File: {}\nReview:\n{}\n\n", path.display(), response.choices[0].message.content);
+                        println!("{}", response_text);
+                        file.write_all(response_text.as_bytes())?;
+                    } else {
+                        println!("No response choices for file: {}", path.display());
+                    }
+                }
+                Err(e) => {
+                    println!("Error: {}", e);
+                }
+            }
         }
     }
 
