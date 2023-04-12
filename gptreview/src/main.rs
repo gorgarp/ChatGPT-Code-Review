@@ -80,7 +80,7 @@ async fn send_prompt(
         .post(url)
         .header("Authorization", format!("Bearer {}", api_key))
         .header("Content-Type", "application/json")
-        .json(&json!({ "model": "gpt-3.5-turbo", "messages": [{"role": "system", "content": "You are an AI that reviews code. Don't explain what it does. Just tell me any errors or improvements."}, {"role": "user", "content": prompt}], "max_tokens": 150, "n": 1, "stop": null }))
+        .json(&json!({ "model": "gpt-3.5-turbo", "messages": [{"role": "system", "content": "You are an AI that reviews code. Don't explain what it does. Just tell me any errors or improvements."}, {"role": "user", "content": prompt}], "max_tokens": 2000, "n": 1, "stop": null }))
         .send()
         .await?;
 
