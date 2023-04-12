@@ -1,9 +1,9 @@
 use reqwest::Client;
 use serde_derive::Deserialize;
 use serde_json::json;
-use std::fs;
-use std::fs::File;
-use std::io::{self, Write};
+use std::fs::{self, File};
+use std::io::{self, BufRead, Write};
+use std::path::Path;
 use walkdir::WalkDir;
 
 #[derive(Debug, Deserialize)]
@@ -23,15 +23,8 @@ struct Message {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Please enter your API key:");
-    let mut api_key = String::new();
-    io::stdin().read_line(&mut api_key)?;
-    api_key = api_key.trim().to_string();
-
-    println!("Please enter the path to your code folder:");
-    let mut folder_path = String::new();
-    io::stdin().read_line(&mut folder_path)?;
-    folder_path = folder_path.trim().to_string();
+    let api_key = read_input("Please enter your API key:")?;
+    let folder_path = read_input("Please enter the path to your code folder:")?;
 
     let client = Client::new();
     let url = "https://api.openai.com/v1/chat/completions";
@@ -42,10 +35,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() {
-            match process_file(&client, &url, &api_key, &path, &mut file).await {
+            match process_file(&client, &url, &api_key, path, &mut file).await {
                 Ok(_) => {}
                 Err(e) => {
-                    println!("Error processing file {}: {}", path.display(), e);
+                    eprintln!("Error processing file {}: {}", path.display(), e);
                 }
             }
         }
@@ -54,11 +47,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn read_input(prompt: &str) -> Result<String, Box<dyn std::error::Error>> {
+    println!("{}", prompt);
+    let mut input = String::new();
+    io::stdin().lock().read_line(&mut input)?;
+    Ok(input.trim().to_string())
+}
+
 async fn process_file(
     client: &Client,
     url: &str,
     api_key: &str,
-    path: &std::path::Path,
+    path: &Path,
     file: &mut File,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let code = fs::read_to_string(path)?;
@@ -80,7 +80,7 @@ async fn send_prompt(
         .post(url)
         .header("Authorization", format!("Bearer {}", api_key))
         .header("Content-Type", "application/json")
-        .json(&json!({ "model": "gpt-3.5-turbo", "messages": [{"role": "system", "content": "You are an AI that reviews code."}, {"role": "user", "content": prompt}], "max_tokens": 150, "n": 1, "stop": null }))
+        .json(&json!({ "model": "gpt-3.5-turbo", "messages": [{"role": "system", "content": "You are an AI that reviews code. Don't explain what it does. Just tell me any errors or improvements."}, {"role": "user", "content": prompt}], "max_tokens": 150, "n": 1, "stop": null }))
         .send()
         .await?;
 
