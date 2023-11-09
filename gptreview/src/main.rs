@@ -93,9 +93,9 @@ async fn send_prompt(
         .header("Authorization", format!("Bearer {}", api_key))
         .header("Content-Type", "application/json")
         .json(&json!({
-            "model": "gpt-4-1106-preview", // Updated model name here
+            "model": "gpt-4", // Updated model name here
             "messages": [{"role": "system", "content": system_message}, {"role": "user", "content": prompt}],
-            "max_tokens": 4000,
+            "max_tokens": 2000,
             "n": 1,
             "stop": null
         }))
